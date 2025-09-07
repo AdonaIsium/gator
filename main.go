@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	config "github.com/AdonaIsium/gator/internal/config"
+	state "github.com/AdonaIsium/gator/internal/state"
 )
 
 func main() {
@@ -13,14 +15,14 @@ func main() {
 		log.Fatalf("error reading config file: %v", err)
 	}
 
-	err = cfg.SetUser("Lanre")
-	if err != nil {
-		log.Fatalf("error setting username: %v", err)
+	s := state.State{}
+
+	s.Config = &cfg
+
+	args := os.Args
+	if len(args) < 2 {
+		log.Fatalf("command must be supplied")
 	}
 
-	cfg, err = config.Read()
-	if err != nil {
-		log.Fatalf("error reading config file: %v", err)
-	}
-	fmt.Printf("db_url: %s, current_user_name: %s", cfg.DBURL, cfg.CurrentUserName)
+	fmt.Printf("db_url: %s, current_user_name: %s", s.Config.DBURL, s.Config.CurrentUserName)
 }
