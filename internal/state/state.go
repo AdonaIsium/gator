@@ -8,6 +8,7 @@ import (
 
 	config "github.com/AdonaIsium/gator/internal/config"
 	"github.com/AdonaIsium/gator/internal/database"
+	rss "github.com/AdonaIsium/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
@@ -83,6 +84,38 @@ func HandlerUsers(s *State, cmd Command) error {
 			fmt.Printf("* %s\n", user.Name)
 		}
 	}
+	return nil
+}
+
+func HandlerAgg(s *State, cmd Command) error {
+	rssFeed, err := rss.FetchFeed(context.Background(), "https://wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%#v\n", rssFeed)
+
+	return nil
+}
+
+func HandlerAddFeed(s *State, cmd Command) error {
+	if len(cmd.Args) != 2 {
+		log.Fatalf("exactly 2 arguments (name, url) required to create feed.")
+	}
+	currentUser, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	createFeedParams := database.CreateFeedParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Name: cmd.Args[0], Url: cmd.Args[1], UserID: currentUser.ID}
+
+	feed, err := s.DBQueries.CreateFeed(context.Background(), createFeedParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("ID: %s, CreateAt: %v, UpdatedAt: %v, Name: %s, URL: %s, UserID: %s\n", feed.ID, feed.CreatedAt, feed.UpdatedAt, feed.Name, feed.Url, feed.UserID)
+
 	return nil
 }
 

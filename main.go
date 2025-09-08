@@ -32,6 +32,8 @@ func main() {
 	c.Register("login", state.HandlerLogin)
 	c.Register("register", state.HandlerRegister)
 	c.Register("users", state.HandlerUsers)
+	c.Register("agg", state.HandlerAgg)
+	c.Register("addfeed", state.HandlerAddFeed)
 	c.Register("reset", state.HandlerReset)
 
 	args := os.Args
