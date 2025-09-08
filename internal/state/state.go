@@ -119,6 +119,23 @@ func HandlerAddFeed(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerGetFeeds(s *State, cmd Command) error {
+	feeds, err := s.DBQueries.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		user, err := s.DBQueries.GetUser(context.Background(), feed.UserID)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Name: %s, URL: %s, User: %s", feed.Name, feed.Url, user.Name)
+	}
+
+	return nil
+}
+
 func HandlerReset(s *State, cmd Command) error {
 	err := s.DBQueries.DeleteAllUsers(context.Background())
 	if err != nil {

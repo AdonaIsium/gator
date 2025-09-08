@@ -34,6 +34,7 @@ func main() {
 	c.Register("users", state.HandlerUsers)
 	c.Register("agg", state.HandlerAgg)
 	c.Register("addfeed", state.HandlerAddFeed)
+	c.Register("feeds", state.HandlerGetFeeds)
 	c.Register("reset", state.HandlerReset)
 
 	args := os.Args
