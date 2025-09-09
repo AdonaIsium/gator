@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/AdonaIsium/gator/internal/database"
 	rss "github.com/AdonaIsium/gator/internal/rss"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type State struct {
@@ -83,13 +85,22 @@ func HandlerUsers(s *State, cmd Command, currentUser database.User) error {
 }
 
 func HandlerAgg(s *State, cmd Command) error {
-	rssFeed, err := rss.FetchFeed(context.Background(), "https://wagslane.dev/index.xml")
+	if len(cmd.Args) != 1 {
+		log.Fatalf("agg takes 1 argument, frequency duration (i.e. 1s, 1m, 1h)")
+	}
+
+	reqFrequency, err := time.ParseDuration(cmd.Args[0])
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%#v\n", rssFeed)
+	fmt.Printf("Collecting feeds every %v\n", reqFrequency)
 
+	ticker := time.NewTicker(reqFrequency)
+
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 	return nil
 }
 
@@ -221,4 +232,49 @@ func (c *Commands) Run(s *State, cmd Command) error {
 
 func (c *Commands) Register(name string, f func(*State, Command) error) {
 	c.Handlers[name] = f
+}
+
+func scrapeFeeds(s *State) error {
+	nextFeed, err := s.DBQueries.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
+	}
+
+	_, err = s.DBQueries.MarkFeedFetched(context.Background(), nextFeed.ID)
+	if err != nil {
+		return err
+	}
+
+	feeds, err := rss.FetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds.Channel.Item {
+		err = createPost(s, feed.Title, feed.Description, nextFeed)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createPost(s *State, title, description string, feed database.Feed) error {
+
+	createPostParams := database.CreatePostParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Title: title, Url: feed.Url, Description: sql.NullString{String: description, Valid: true}, PublishedAt: time.Now(), FeedID: feed.ID}
+
+	postResponse, err := s.DBQueries.CreatePost(context.Background(), createPostParams)
+	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok {
+			if pgErr.Code == "23505" {
+				return nil
+			}
+		}
+		return err
+	}
+
+	fmt.Printf("post created successfully: %s\n", postResponse.Title)
+
+	return nil
 }
