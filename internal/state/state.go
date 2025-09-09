@@ -176,6 +176,26 @@ func HandlerFollowing(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerUnfollow(s *State, cmd Command, currentUser database.User) error {
+	feedURL := cmd.Args[0]
+
+	feed, err := s.DBQueries.GetFeedByUrl(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	deleteFeedFollowParams := database.DeleteFeedFollowParams{UserID: currentUser.ID, FeedID: feed.ID}
+
+	err = s.DBQueries.DeleteFeedFollow(context.Background(), deleteFeedFollowParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("follow of %s successfully deleted\n", feed.Name)
+
+	return nil
+}
+
 func HandlerReset(s *State, cmd Command) error {
 	err := s.DBQueries.DeleteAllUsers(context.Background())
 	if err != nil {

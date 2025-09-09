@@ -38,6 +38,7 @@ func main() {
 	c.Register("feeds", state.HandlerGetFeeds)
 	c.Register("following", state.HandlerFollowing)
 	c.Register("follow", mw.MiddlewareLoggedIn(state.HandlerFollow))
+	c.Register("unfollow", mw.MiddlewareLoggedIn(state.HandlerUnfollow))
 	c.Register("reset", state.HandlerReset)
 
 	args := os.Args
