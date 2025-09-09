@@ -7,6 +7,7 @@ import (
 
 	config "github.com/AdonaIsium/gator/internal/config"
 	"github.com/AdonaIsium/gator/internal/database"
+	mw "github.com/AdonaIsium/gator/internal/middleware"
 	state "github.com/AdonaIsium/gator/internal/state"
 	_ "github.com/lib/pq"
 )
@@ -31,12 +32,12 @@ func main() {
 	c := state.Commands{Handlers: map[string]func(*state.State, state.Command) error{}}
 	c.Register("login", state.HandlerLogin)
 	c.Register("register", state.HandlerRegister)
-	c.Register("users", state.HandlerUsers)
+	c.Register("users", mw.MiddlewareLoggedIn(state.HandlerUsers))
 	c.Register("agg", state.HandlerAgg)
-	c.Register("addfeed", state.HandlerAddFeed)
+	c.Register("addfeed", mw.MiddlewareLoggedIn(state.HandlerAddFeed))
 	c.Register("feeds", state.HandlerGetFeeds)
 	c.Register("following", state.HandlerFollowing)
-	c.Register("follow", state.HandlerFollow)
+	c.Register("follow", mw.MiddlewareLoggedIn(state.HandlerFollow))
 	c.Register("reset", state.HandlerReset)
 
 	args := os.Args
