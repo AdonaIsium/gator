@@ -35,6 +35,8 @@ func main() {
 	c.Register("agg", state.HandlerAgg)
 	c.Register("addfeed", state.HandlerAddFeed)
 	c.Register("feeds", state.HandlerGetFeeds)
+	c.Register("following", state.HandlerFollowing)
+	c.Register("follow", state.HandlerFollow)
 	c.Register("reset", state.HandlerReset)
 
 	args := os.Args

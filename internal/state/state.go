@@ -114,6 +114,13 @@ func HandlerAddFeed(s *State, cmd Command) error {
 		return err
 	}
 
+	createFeedFollowParams := database.CreateFeedFollowParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), UserID: currentUser.ID, FeedID: feed.ID}
+
+	_, err = s.DBQueries.CreateFeedFollow(context.Background(), createFeedFollowParams)
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("ID: %s, CreateAt: %v, UpdatedAt: %v, Name: %s, URL: %s, UserID: %s\n", feed.ID, feed.CreatedAt, feed.UpdatedAt, feed.Name, feed.Url, feed.UserID)
 
 	return nil
@@ -131,6 +138,53 @@ func HandlerGetFeeds(s *State, cmd Command) error {
 			return err
 		}
 		fmt.Printf("Name: %s, URL: %s, User: %s", feed.Name, feed.Url, user.Name)
+	}
+
+	return nil
+}
+
+func HandlerFollow(s *State, cmd Command) error {
+	if len(cmd.Args) != 1 {
+		log.Fatalf("follow should have exactly one argument (the url to follow)")
+	}
+
+	feedURL := cmd.Args[0]
+
+	currentUser, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	feed, err := s.DBQueries.GetFeedByUrl(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	createFeedFollowParams := database.CreateFeedFollowParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), UserID: currentUser.ID, FeedID: feed.ID}
+
+	_, err = s.DBQueries.CreateFeedFollow(context.Background(), createFeedFollowParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Feed Follow Record Created for: feed name = %s, current user = %s", feed.Name, currentUser.Name)
+
+	return nil
+}
+
+func HandlerFollowing(s *State, cmd Command) error {
+	user, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	followedFeeds, err := s.DBQueries.GetFeedFollowsForUser(context.Background(), user.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, followedFeed := range followedFeeds {
+		fmt.Printf("%s\n", followedFeed.FeedName)
 	}
 
 	return nil
