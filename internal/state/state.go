@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/AdonaIsium/gator/internal/database"
 	rss "github.com/AdonaIsium/gator/internal/rss"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type State struct {
@@ -249,8 +251,30 @@ func scrapeFeeds(s *State) error {
 	}
 
 	for _, feed := range feeds.Channel.Item {
-		fmt.Printf("%s\n", feed.Title)
+		err = createPost(s, feed.Title, feed.Description, nextFeed)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func createPost(s *State, title, description string, feed database.Feed) error {
+
+	createPostParams := database.CreatePostParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Title: title, Url: feed.Url, Description: sql.NullString{String: description, Valid: true}, PublishedAt: time.Now(), FeedID: feed.ID}
+
+	postResponse, err := s.DBQueries.CreatePost(context.Background(), createPostParams)
+	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok {
+			if pgErr.Code == "23505" {
+				return nil
+			}
+		}
+		return err
+	}
+
+	fmt.Printf("post created successfully: %s\n", postResponse.Title)
 
 	return nil
 }
