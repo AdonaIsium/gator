@@ -23,9 +23,9 @@ FROM inserted i
 JOIN users u ON i.user_id = u.id
 JOIN feeds f ON i.feed_id = f.id;
 
-
--- -- name: GetFeeds :many
--- SELECT * FROM feed_follows;
+-- name: DeleteFeedFollow :exec
+DELETE FROM feed_follows 
+WHERE user_id = $1 AND feed_id = $2;
 
 -- name: GetFeedFollowsForUser :many
 SELECT

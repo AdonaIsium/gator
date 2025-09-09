@@ -53,28 +53,23 @@ func HandlerRegister(s *State, cmd Command) error {
 
 	params := database.CreateUserParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Name: cmd.Args[0]}
 
-	dbUser, err := s.DBQueries.CreateUser(context.Background(), params)
+	currentUser, err := s.DBQueries.CreateUser(context.Background(), params)
 	if err != nil {
 		log.Fatalf("error creating user: %v", err)
 	}
 
-	s.Config.CurrentUserName = dbUser.Name
-	s.Config.SetUser(dbUser.Name)
+	s.Config.CurrentUserName = currentUser.Name
+	s.Config.SetUser(currentUser.Name)
 
-	fmt.Printf("created user: %s", dbUser.Name)
+	fmt.Printf("created user: %s", currentUser.Name)
 
 	return nil
 }
 
-func HandlerUsers(s *State, cmd Command) error {
+func HandlerUsers(s *State, cmd Command, currentUser database.User) error {
 	users, err := s.DBQueries.GetUsers(context.Background())
 	if err != nil {
 		log.Fatalf("unable to get all users: %v", err)
-	}
-
-	currentUser, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		log.Fatalf("current user not in db: %v", err)
 	}
 
 	for _, user := range users {
@@ -98,13 +93,9 @@ func HandlerAgg(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerAddFeed(s *State, cmd Command) error {
+func HandlerAddFeed(s *State, cmd Command, currentUser database.User) error {
 	if len(cmd.Args) != 2 {
 		log.Fatalf("exactly 2 arguments (name, url) required to create feed.")
-	}
-	currentUser, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return err
 	}
 
 	createFeedParams := database.CreateFeedParams{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now(), Name: cmd.Args[0], Url: cmd.Args[1], UserID: currentUser.ID}
@@ -143,17 +134,12 @@ func HandlerGetFeeds(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerFollow(s *State, cmd Command) error {
+func HandlerFollow(s *State, cmd Command, currentUser database.User) error {
 	if len(cmd.Args) != 1 {
 		log.Fatalf("follow should have exactly one argument (the url to follow)")
 	}
 
 	feedURL := cmd.Args[0]
-
-	currentUser, err := s.DBQueries.GetUserByName(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return err
-	}
 
 	feed, err := s.DBQueries.GetFeedByUrl(context.Background(), feedURL)
 	if err != nil {
@@ -186,6 +172,26 @@ func HandlerFollowing(s *State, cmd Command) error {
 	for _, followedFeed := range followedFeeds {
 		fmt.Printf("%s\n", followedFeed.FeedName)
 	}
+
+	return nil
+}
+
+func HandlerUnfollow(s *State, cmd Command, currentUser database.User) error {
+	feedURL := cmd.Args[0]
+
+	feed, err := s.DBQueries.GetFeedByUrl(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	deleteFeedFollowParams := database.DeleteFeedFollowParams{UserID: currentUser.ID, FeedID: feed.ID}
+
+	err = s.DBQueries.DeleteFeedFollow(context.Background(), deleteFeedFollowParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("follow of %s successfully deleted\n", feed.Name)
 
 	return nil
 }
